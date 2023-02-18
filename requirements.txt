@@ -1,0 +1,4 @@
+moviepy
+playsound
+pillow
+numpy
