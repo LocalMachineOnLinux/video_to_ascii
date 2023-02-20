@@ -2,49 +2,51 @@ import moviepy.editor as ed
 import os
 import sys
 import time
-from numpy import arange
+import numpy as np
 from PIL import Image
 from frame import get_frame
 
-def load_video():
-    try:
-        return ed.VideoFileClip(sys.argv[1])
-    except IndexError:
-        print("Please, use like this:")
-        print("python main.py your_video.mp4")
-        exit()
 
-def make_terminal_clip(terminal_clip, length, fps):
-    for frame_num in arange(0, length, 1/fps):
-        clip_resized.save_frame("frame.jpg", t = frame_num)
-        terminal_clip.append(get_frame(Image.open("frame.jpg")))
-        os.remove("frame.jpg")
-    return terminal_clip
+class App():
+    def __init__(self):
+        self.terminal_size = list(os.get_terminal_size())
+        self.width, self.height = self.terminal_size
+        self.terminal_video = []
 
-def play_terminal_clip(terminal_clip, fps):
-    for terminal_frame in terminal_clip:
-        time.sleep(1/fps)
-        print(terminal_frame)
+    def load_video(self):
+        try:
+            self.video = ed.VideoFileClip(sys.argv[1])
+        except IndexError:
+            print("Please, use like this:")
+            print("python main.py your_video.mp4")
+            exit()
+
+    def resize_video(self):
+        self.video = self.video.resize(self.terminal_size)
+    
+    def create_terminal_video(self):
+        for frame_num in np.arange(0, self.video.duration, 1/self.video.fps):
+            self.video.save_frame("frame.jpg", t = frame_num)
+            frame = Image.open("frame.jpg")
+            pixels = np.array(frame.getdata()).reshape(*frame.size, 3)
+            self.terminal_video.append(get_frame(pixels, frame.size))
+    
+    def play_terminal_video(self):
+        for terminal_frame in self.terminal_video:
+            time.sleep(1/self.video.fps)
+            print(terminal_frame)
+
+    def run(self):
+        self.load_video()
+        self.resize_video()
+
+        self.frames_nums = int(self.video.fps * self.video.duration)
+        
+        self.create_terminal_video()
+        self.play_terminal_video()
 
 if __name__ == '__main__':
-    terminal_size = list(os.get_terminal_size())
-    w, h = terminal_size
+    app = App()
+    app.run()
 
-    clip = load_video()
-    clip_resized = clip.resize(terminal_size)
-    
-    fps = clip_resized.fps
-    duration = clip_resized.duration
-    frames_nums = int(fps * duration)
-    
-    terminal_clip = make_terminal_clip([], duration, fps)
-
-    try:
-        if sys.argv[2] == "enable":
-            import threading
-            from playsound import playsound
-            threading.Thread(target=playsound, args=(sys.argv[1],), daemon=True).start()
-    except IndexError:
-        pass
-    play_terminal_clip(terminal_clip, fps)
 
